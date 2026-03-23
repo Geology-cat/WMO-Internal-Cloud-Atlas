@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>太陽高度計算アプリ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="card">
+
+        <header>
+            <h1>☀️ 太陽高度計算アプリ</h1>
+            <p id="currentTime">現在: ----年--月--日 --:--:--</p>
+        </header>
+
+        <!-- 地点設定 -->
+        <div class="section">
+            <p class="section-title">📍 地点設定</p>
+
+            <div class="grid-2">
+                <div>
+                    <label for="city-select">地名から選択</label>
+                    <select id="city-select">
+                        <option value="hakodate">函館</option>
+                        <option value="tokyo">東京</option>
+                        <option value="sapporo">札幌</option>
+                        <option value="sendai">仙台</option>
+                        <option value="nagoya">名古屋</option>
+                        <option value="osaka">大阪</option>
+                        <option value="hiroshima">広島</option>
+                        <option value="fukuoka">福岡</option>
+                        <option value="naha">那覇</option>
+                    </select>
+                </div>
+                <div>
+                    <label>現在地を利用</label>
+                    <button id="get-location-btn" class="btn btn-location">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                        </svg>
+                        現在位置を取得
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 1rem;">
+                <div>
+                    <label for="latitude">緯度 (°) [-90 ~ 90]</label>
+                    <input type="number" id="latitude" step="0.0001" placeholder="例: 35.6895">
+                </div>
+                <div>
+                    <label for="longitude">経度 (°) [-180 ~ 180]</label>
+                    <input type="number" id="longitude" step="0.0001" placeholder="例: 139.6917">
+                </div>
+            </div>
+
+            <button id="set-location-btn" class="btn btn-calc">
+                地点を設定して計算
+            </button>
+            <p id="location-status"></p>
+        </div>
+
+        <!-- 計算結果 -->
+        <div class="section">
+            <p class="section-title">☀️ 計算結果</p>
+            <div class="results-panel fade-in">
+                <span id="display-location">地点が設定されていません</span>
+
+                <div class="result-item">
+                    <span class="result-label">現在の太陽高度</span>
+                    <span id="current-altitude" class="result-value">--.-- °</span>
+                </div>
+
+                <div class="times-grid">
+                    <!-- 主虹 (Primary Rainbow) <= 42° -->
+                    <div class="times-card">
+                        <p class="times-title">🌈 主虹</p>
+                        <p class="times-desc">太陽高度 42°以下 (朝・夕)</p>
+                        <div class="times-row">
+                            <div class="time-range-block">
+                                <p class="time-range-label">午前の観測可能時間</p>
+                                <p id="rainbow-morning" class="time-range-val">--:-- 〜 --:--</p>
+                            </div>
+                            <div class="time-range-block">
+                                <p class="time-range-label">午後の観測可能時間</p>
+                                <p id="rainbow-afternoon" class="time-range-val">--:-- 〜 --:--</p>
+                            </div>
+                        </div>
+                        <p id="rainbow-note" class="note-text"></p>
+                    </div>
+
+                    <!-- 環天頂アーク (CZA) <= 32° -->
+                    <div class="times-card">
+                        <p class="times-title">◡ 環天頂アーク</p>
+                        <p class="times-desc">太陽高度 32°以下</p>
+                        <div class="times-row">
+                            <div class="time-range-block">
+                                <p class="time-range-label">午前の観測可能時間</p>
+                                <p id="cza-morning" class="time-range-val">--:-- 〜 --:--</p>
+                            </div>
+                            <div class="time-range-block">
+                                <p class="time-range-label">午後の観測可能時間</p>
+                                <p id="cza-afternoon" class="time-range-val">--:-- 〜 --:--</p>
+                            </div>
+                        </div>
+                        <p id="cza-note" class="note-text"></p>
+                    </div>
+
+                    <!-- 環水平アーク (CHA) >= 58° -->
+                    <div class="times-card">
+                        <p class="times-title">_ 環水平アーク</p>
+                        <p class="times-desc">太陽高度 58°以上</p>
+                        <div class="times-row">
+                            <div class="time-range-block">
+                                <p class="time-range-label">観測可能時間</p>
+                                <p id="cha-time" class="time-range-val">--:-- 〜 --:--</p>
+                            </div>
+                        </div>
+                        <p id="cha-note" class="note-text"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var latitudeInput = document.getElementById('latitude');
+            var longitudeInput = document.getElementById('longitude');
+            var citySelect = document.getElementById('city-select');
+            var getLocationBtn = document.getElementById('get-location-btn');
+            var setLocationBtn = document.getElementById('set-location-btn');
+            var locationStatus = document.getElementById('location-status');
+            var currentTimeEl = document.getElementById('currentTime');
+            var currentAltitudeEl = document.getElementById('current-altitude');
+            
+            // New Elements for Rainbow/Arcs
+            var rainbowMorningEl = document.getElementById('rainbow-morning');
+            var rainbowAfternoonEl = document.getElementById('rainbow-afternoon');
+            var rainbowNoteEl = document.getElementById('rainbow-note');
+            var czaMorningEl = document.getElementById('cza-morning');
+            var czaAfternoonEl = document.getElementById('cza-afternoon');
+            var czaNoteEl = document.getElementById('cza-note');
+            var chaTimeEl = document.getElementById('cha-time');
+            var chaNoteEl = document.getElementById('cha-note');
+
+            var displayLocationEl = document.getElementById('display-location');
+
+            var CITIES = {
+                'tokyo':     { name: '東京',   lat: 35.6895, lon: 139.6917 },
+                'sapporo':   { name: '札幌',   lat: 43.0621, lon: 141.3544 },
+                'hakodate':  { name: '函館',   lat: 41.7687, lon: 140.7288 },
+                'sendai':    { name: '仙台',   lat: 38.2682, lon: 140.8694 },
+                'nagoya':    { name: '名古屋', lat: 35.1815, lon: 136.9066 },
+                'osaka':     { name: '大阪',   lat: 34.6937, lon: 135.5023 },
+                'hiroshima': { name: '広島',   lat: 34.3853, lon: 132.4553 },
+                'fukuoka':   { name: '福岡',   lat: 33.5904, lon: 130.4017 },
+                'naha':      { name: '那覇',   lat: 26.2124, lon: 127.6792 }
+            };
+
+            // var TARGET_ALTITUDE = 42; // Removed
+            var calculationInterval;
+
+            var deg2rad = function(deg) { return deg * Math.PI / 180; };
+            var rad2deg = function(rad) { return rad * 180 / Math.PI; };
+
+            function calculateSunPosition(lat, lon, date) {
+                var year    = date.getFullYear();
+                var month   = date.getMonth() + 1;
+                var day     = date.getDate();
+                var hours   = date.getHours();
+                var minutes = date.getMinutes();
+                var seconds = date.getSeconds();
+                var isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+                var daysInMonth = [0,31,28,31,30,31,30,31,31,30,31,30,31];
+                if (isLeap) daysInMonth[2] = 29;
+                var dayOfYear = 0;
+                for (var i = 1; i < month; i++) dayOfYear += daysInMonth[i];
+                dayOfYear += day;
+                var declination = -23.45 * Math.cos(deg2rad((360 / 365) * (dayOfYear + 10)));
+                var b = deg2rad((360 / 365) * (dayOfYear - 81));
+                var eqTime = 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
+                var localTime = hours + minutes / 60 + seconds / 3600;
+                var lst = 135;
+                var t = localTime + (lon - lst) * 4 / 60 + eqTime / 60;
+                var hourAngle = 15 * (t - 12);
+                var latRad           = deg2rad(lat);
+                var declinationRad   = deg2rad(declination);
+                var hourAngleRad     = deg2rad(hourAngle);
+                var sinAltitude = Math.sin(latRad) * Math.sin(declinationRad) +
+                                  Math.cos(latRad) * Math.cos(declinationRad) * Math.cos(hourAngleRad);
+                return { altitude: rad2deg(Math.asin(sinAltitude)), declination: declination, eqTime: eqTime };
+            }
+
+            // Calculate time when sun crosses a specific altitude
+            function calculateTimeForAltitude(lat, lon, targetAlt, date) {
+                var sunPos         = calculateSunPosition(lat, lon, date); // Use current date for approx declination
+                var declination    = sunPos.declination;
+                var eqTime         = sunPos.eqTime;
+                var latRad         = deg2rad(lat);
+                var targetAltRad   = deg2rad(targetAlt);
+                var declinationRad = deg2rad(declination);
+                
+                // cos(h) = (sin(alt) - sin(lat)sin(dec)) / (cos(lat)cos(dec))
+                var numerator = Math.sin(targetAltRad) - Math.sin(latRad) * Math.sin(declinationRad);
+                var denominator = Math.cos(latRad) * Math.cos(declinationRad);
+                
+                // Avoid division by zero (unlikely for normal latitudes)
+                if (Math.abs(denominator) < 0.0001) return { morning: null, afternoon: null, always: false };
+
+                var cosHourAngle = numerator / denominator;
+
+                // Check visibility
+                if (cosHourAngle < -1) {
+                     // Always ABOVE the target altitude (Midnight Sun scenario or target is very low)
+                     return { morning: null, afternoon: null, always: true, above: true };
+                }
+                if (cosHourAngle > 1) {
+                    // Always BELOW the target altitude
+                    return { morning: null, afternoon: null, always: true, above: false };
+                }
+
+                var hourAngle        = rad2deg(Math.acos(cosHourAngle));
+                var lst              = 135; // JST standard meridian
+                var solarNoon        = 12 - (lon - lst) * 4 / 60 - eqTime / 60;
+                var hourAngleInHours = hourAngle / 15;
+                
+                return { 
+                    morning: solarNoon - hourAngleInHours, 
+                    afternoon: solarNoon + hourAngleInHours,
+                    always: false
+                };
+            }
+
+            function formatTime(timeInHours) {
+                if (timeInHours === null || isNaN(timeInHours)) return '--:--';
+                // Handle day overflow/underflow if necessary, but for 0-24h:
+                var h = Math.floor(timeInHours);
+                var m = Math.round((timeInHours - h) * 60);
+                if (m === 60) { h++; m = 0; }
+                if (h < 0) h += 24;
+                if (h >= 24) h -= 24;
+                return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+            }
+
+            function updateCalculations() {
+                var lat = parseFloat(latitudeInput.value);
+                var lon = parseFloat(longitudeInput.value);
+                if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                    locationStatus.textContent = '有効な緯度・経度を入力してください。';
+                    return;
+                }
+                locationStatus.textContent = '';
+                displayLocationEl.textContent = '計算地点: 緯度 ' + lat.toFixed(4) + '°, 経度 ' + lon.toFixed(4) + '°';
+
+                // Real-time altitude update
+                if (calculationInterval) clearInterval(calculationInterval);
+                var updateCurrent = function() {
+                    var now = new Date();
+                    var sunPos = calculateSunPosition(lat, lon, now);
+                    currentAltitudeEl.textContent = sunPos.altitude.toFixed(2) + ' °';
+                };
+                updateCurrent();
+                calculationInterval = setInterval(updateCurrent, 1000);
+
+                // Calculate ranges for Today
+                var today = new Date();
+                
+                // 1. Sun Rise/Set (approx at 0 degrees, strictly -0.833 but simplified to 0 as per request)
+                var t0 = calculateTimeForAltitude(lat, lon, 0, today);
+                // 2. Thresholds
+                var t32 = calculateTimeForAltitude(lat, lon, 32, today); // CZA
+                var t42 = calculateTimeForAltitude(lat, lon, 42, today); // Rainbow
+                var t58 = calculateTimeForAltitude(lat, lon, 58, today); // CHA
+
+                // --- Helper to set text ---
+                function setRange(el, start, end) {
+                    el.textContent = formatTime(start) + ' 〜 ' + formatTime(end);
+                }
+                function setEmpty(el) { el.textContent = '--:--'; }
+
+                // --- 1. Primary Rainbow (<= 42°) ---
+                // Visible between Sunrise and 42° (AM), and 42° and Sunset (PM).
+                // If max alt < 42, visible all day (Sunrise-Sunset).
+                
+                if (t0.always && !t0.above) {
+                    // Polar night (always below 0) - No sun
+                    setEmpty(rainbowMorningEl); setEmpty(rainbowAfternoonEl);
+                    rainbowNoteEl.textContent = '太陽が出ないため観測できません。';
+                } else if (t0.always && t0.above) {
+                    // Midnight sun (always above 0) - Check 42 threshold
+                    // (Simplified logic as this is Japan context, skipping complex polar logic)
+                    rainbowNoteEl.textContent = '白夜です。';
+                } else {
+                    // Normal day with sunrise/sunset
+                    var rise = t0.morning;
+                    var set  = t0.afternoon;
+
+                    // Check 42° limit
+                    if (t42.always && !t42.above) {
+                        // Always below 42° (but rises above 0) -> Visible all day
+                        setRange(rainbowMorningEl, rise, set);
+                        rainbowAfternoonEl.textContent = '（一日中観測可能）';
+                        rainbowNoteEl.textContent = '太陽高度が一日中42°以下のため、日中ずっと観測のチャンスがあります。';
+                    } else if (!t42.always) {
+                        // Crosses 42°
+                        setRange(rainbowMorningEl, rise, t42.morning);
+                        setRange(rainbowAfternoonEl, t42.afternoon, set);
+                        rainbowNoteEl.textContent = '';
+                    } else {
+                        // Always above 42° (Impossible in Japan, but hypothetically)
+                        setEmpty(rainbowMorningEl); setEmpty(rainbowAfternoonEl);
+                        rainbowNoteEl.textContent = '太陽高度が高すぎるため観測できません。';
+                    }
+                }
+
+                // --- 2. Circumzenithal Arc (<= 32°) ---
+                if (t0.always && !t0.above) {
+                    setEmpty(czaMorningEl); setEmpty(czaAfternoonEl);
+                    czaNoteEl.textContent = '太陽が出ないため観測できません。';
+                } else {
+                    var rise = t0.morning;
+                    var set  = t0.afternoon;
+                    
+                    if (t32.always && !t32.above) {
+                        // Always below 32°
+                        setRange(czaMorningEl, rise, set);
+                        czaAfternoonEl.textContent = '（一日中観測可能）';
+                        czaNoteEl.textContent = '太陽高度が一日中32°以下のため、日中ずっと観測のチャンスがあります。';
+                    } else if (!t32.always) {
+                        // Crosses 32°
+                        setRange(czaMorningEl, rise, t32.morning);
+                        setRange(czaAfternoonEl, t32.afternoon, set);
+                        czaNoteEl.textContent = '';
+                    } else {
+                        setEmpty(czaMorningEl); setEmpty(czaAfternoonEl);
+                        czaNoteEl.textContent = '太陽高度が高すぎるため観測できません。';
+                    }
+                }
+
+                // --- 3. Circumhorizontal Arc (>= 58°) ---
+                if (t58.always && !t58.above) {
+                    // Always below 58°
+                    setEmpty(chaTimeEl);
+                    chaNoteEl.textContent = '今日は太陽高度が58°に達しないため観測できません。';
+                } else if (!t58.always) {
+                    // Crosses 58° (Visible while ABOVE 58)
+                    setRange(chaTimeEl, t58.morning, t58.afternoon);
+                    chaNoteEl.textContent = '';
+                } else {
+                    // Always above 58°
+                    setRange(chaTimeEl, t0.morning, t0.afternoon); // Visible all day (while sun is up)
+                    chaNoteEl.textContent = '太陽高度が非常に高いため、長時間観測可能です。';
+                }
+            }
+
+            function updateLocationInputs(lat, lon) {
+                latitudeInput.value  = lat.toFixed(4);
+                longitudeInput.value = lon.toFixed(4);
+            }
+
+            citySelect.addEventListener('change', function() {
+                var city = CITIES[citySelect.value];
+                updateLocationInputs(city.lat, city.lon);
+                locationStatus.textContent = '「' + city.name + '」が選択されました。ボタンを押して確定してください。';
+            });
+
+            setLocationBtn.addEventListener('click', updateCalculations);
+
+            function fetchGeolocation() {
+                var originalContent = getLocationBtn.innerHTML;
+                getLocationBtn.innerHTML = '<div class="loader"></div><span>取得中...</span>';
+                getLocationBtn.disabled  = true;
+                locationStatus.textContent = '位置情報を取得しています...';
+
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        var lat = position.coords.latitude;
+                        var lon = position.coords.longitude;
+                        updateLocationInputs(lat, lon);
+                        var found = Object.keys(CITIES).find(function(key) {
+                            return CITIES[key].lat.toFixed(2) === lat.toFixed(2) &&
+                                   CITIES[key].lon.toFixed(2) === lon.toFixed(2);
+                        });
+                        citySelect.value = found || '';
+                        locationStatus.textContent = '現在位置が入力されました。ボタンを押して確定してください。';
+                        getLocationBtn.innerHTML = originalContent;
+                        getLocationBtn.disabled  = false;
+                    },
+                    function(error) {
+                        var msg = '';
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:    msg = '位置情報の利用が許可されていません。'; break;
+                            case error.POSITION_UNAVAILABLE: msg = '位置情報を取得できませんでした。';     break;
+                            case error.TIMEOUT:              msg = '位置情報取得がタイムアウトしました。'; break;
+                            default:                         msg = '不明なエラーが発生しました。';         break;
+                        }
+                        locationStatus.textContent = 'エラー: ' + msg;
+                        getLocationBtn.innerHTML = originalContent;
+                        getLocationBtn.disabled  = false;
+                    }
+                );
+            }
+
+            getLocationBtn.addEventListener('click', function() {
+                if (!navigator.geolocation) {
+                    locationStatus.textContent = 'このブラウザは位置情報取得に対応していません。';
+                    return;
+                }
+                fetchGeolocation();
+            });
+
+            function initialize() {
+                setInterval(function() {
+                    var now = new Date();
+                    var y = now.getFullYear();
+                    var mo = now.getMonth() + 1;
+                    var d  = now.getDate();
+                    var h  = now.getHours();
+                    var mi = now.getMinutes();
+                    var s  = now.getSeconds();
+                    currentTimeEl.textContent = y + '年' + mo + '月' + d + '日 ' +
+                        (h  < 10 ? '0' : '') + h  + ':' +
+                        (mi < 10 ? '0' : '') + mi + ':' +
+                        (s  < 10 ? '0' : '') + s;
+                }, 1000);
+
+                citySelect.value = 'hakodate';
+                var init = CITIES['hakodate'];
+                updateLocationInputs(init.lat, init.lon);
+                updateCalculations();
+            }
+
+            initialize();
+        });
+    </script>
+
+</body>
+</html>
