@@ -1,0 +1,313 @@
+/* ===================================================
+   WMO International Cloud Atlas – 日本語訳
+   style.css  |  雲図帳テーマ
+   =================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@400;500&display=swap');
+
+/* ---------- リセット & 基本設定 ---------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --sky-light:   #ddeeff;
+    --sky-mid:     #a8cce8;
+    --sky-deep:    #5590b8;
+    --cloud-white: #f4f8fc;
+    --cloud-gray:  #c8d8e8;
+    --text-dark:   #1a2a3a;
+    --text-mid:    #3a5068;
+    --text-light:  #6a8098;
+    --accent:      #2a6496;
+    --accent-hover:#1a4a76;
+    --border:      #b0ccde;
+    --shadow:      rgba(30, 60, 100, 0.12);
+    --width:       80%;
+    --max-width:   1200px;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Noto Serif JP', 'Hiragino Mincho ProN', Georgia, serif;
+    background: linear-gradient(160deg, #c8dff2 0%, #e8f2fa 50%, #f0f6fc 100%);
+    background-attachment: fixed;
+    color: var(--text-dark);
+    line-height: 1.8;
+    min-height: 100vh;
+}
+
+/* ---------- ヘッダー ---------- */
+header {
+    background: linear-gradient(135deg, #1a3a5c 0%, var(--sky-deep) 60%, var(--sky-mid) 100%);
+    color: #fff;
+    padding: 2rem 0;
+    box-shadow: 0 4px 12px var(--shadow);
+}
+
+header .header-inner {
+    width: var(--width);
+    max-width: var(--max-width);
+    margin: 0 auto;
+}
+
+header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+header p.subtitle {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+    opacity: 0.85;
+}
+
+/* ---------- ナビ ---------- */
+nav {
+    background: rgba(255,255,255,0.85);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+nav ul {
+    width: var(--width);
+    max-width: var(--max-width);
+    margin: 0 auto;
+    list-style: none;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    flex-wrap: wrap;
+}
+
+nav ul li a {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.88rem;
+    color: var(--accent);
+    text-decoration: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    border-bottom: none;
+    transition: background 0.2s, color 0.2s;
+}
+
+nav ul li a:hover {
+    background: var(--sky-mid);
+    color: #fff;
+    border-bottom: none;
+}
+
+nav ul li a.active {
+    background: var(--accent);
+    color: #fff;
+    border-bottom: none;
+}
+
+nav ul {
+    margin-left: 0;
+}
+
+/* ---------- メインコンテンツ ---------- */
+.container {
+    width: var(--width);
+    max-width: var(--max-width);
+    margin: 2.5rem auto 4rem;
+    background: rgba(244, 248, 252, 0.95);
+    border: 1px solid var(--cloud-gray);
+    border-radius: 10px;
+    padding: 3rem 4rem;
+    box-shadow: 0 6px 24px var(--shadow);
+}
+
+/* ---------- 見出し ---------- */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-dark);
+    line-height: 1.4;
+    font-weight: 700;
+}
+
+.container > h1:first-child {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    margin-top: 0;
+}
+
+h1 { font-size: 2rem;   margin-bottom: 1rem; }
+h2 {
+    font-size: 1.5rem;
+    margin-top: 2.5rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--sky-mid);
+    color: var(--text-mid);
+}
+h3 {
+    font-size: 1.2rem;
+    margin-top: 2rem;
+    margin-bottom: 0.6rem;
+    color: var(--accent);
+}
+h4 { font-size: 1.05rem; margin-top: 1.5rem; }
+
+/* ---------- 段落・テキスト ---------- */
+p { margin-bottom: 1em; }
+
+/* ---------- リンク ---------- */
+a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--accent);
+    transition: color 0.15s, border-color 0.15s;
+}
+a:hover {
+    color: var(--accent-hover);
+    border-bottom-style: solid;
+}
+
+/* ---------- 画像 ---------- */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+    border: 1px solid var(--cloud-gray);
+    box-shadow: 0 4px 12px var(--shadow);
+    margin: 1.5rem auto;
+}
+
+img + em, img + p > em {
+    display: block;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: -0.8rem;
+    margin-bottom: 1rem;
+}
+
+/* ---------- 表 ---------- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.92rem;
+}
+
+th {
+    background: var(--sky-deep);
+    color: #fff;
+    padding: 0.6rem 0.9rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+td {
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+}
+
+tr:nth-child(even) td {
+    background: var(--sky-light);
+}
+
+/* ---------- コードブロック ---------- */
+code {
+    font-family: 'Courier New', monospace;
+    background: var(--cloud-gray);
+    color: var(--text-dark);
+    padding: 0.15em 0.45em;
+    border-radius: 4px;
+    font-size: 0.88em;
+}
+
+pre {
+    background: #1e2e3e;
+    color: #d4eaf8;
+    padding: 1.2rem 1.5rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+}
+
+pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+}
+
+/* ---------- 引用 ---------- */
+blockquote {
+    border-left: 4px solid var(--sky-mid);
+    margin: 1.5rem 0;
+    padding: 0.8rem 1.2rem;
+    background: var(--sky-light);
+    border-radius: 0 6px 6px 0;
+    color: var(--text-mid);
+    font-style: italic;
+}
+
+/* ---------- 水平線 ---------- */
+hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+}
+
+/* ---------- リスト ---------- */
+ul, ol {
+    margin: 0.8rem 0 1rem 1.5rem;
+}
+li { margin-bottom: 0.4rem; }
+
+/* ---------- フッター ---------- */
+footer {
+    text-align: center;
+    padding: 1.5rem 0;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.82rem;
+    color: var(--text-light);
+    background: rgba(30, 50, 80, 0.08);
+    border-top: 1px solid var(--border);
+}
+
+/* ---------- テーブル レスポンシブ ---------- */
+.table-wrapper {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+}
+
+.table-wrapper table {
+    margin: 0;
+}
+
+/* ---------- ヘッダー内リンク ---------- */
+header a,
+header a:hover {
+    color: #fff;
+    border-bottom: none;
+}
+
+/* ---------- フッター内リンク ---------- */
+footer a {
+    border-bottom: none;
+}
+
+/* ---------- レスポンシブ ---------- */
+@media (max-width: 900px) {
+    :root { --width: 95%; }
+    .container { padding: 2rem 1.5rem; }
+    header h1 { font-size: 1.3rem; }
+    nav ul { justify-content: center; }
+}

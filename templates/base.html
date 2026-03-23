@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% if is_index %}WMO 国際雲図帳 日本語訳{% else %}{{ title }} | WMO 国際雲図帳 日本語訳{% endif %}</title>
+    <link rel="stylesheet" href="{{ css_path }}">
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <h1>WMO International Cloud Atlas<br>国際雲図帳 日本語訳</h1>
+        <p class="subtitle">World Meteorological Organization — 世界気象機関</p>
+    </div>
+</header>
+
+<nav>
+    <ul>
+        {% for item in nav_items %}
+        <li>
+            {% if item.external %}
+            <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.label }} ↗</a>
+            {% else %}
+            <a href="{{ item.url }}"{% if item.active %} class="active"{% endif %}>{{ item.label }}</a>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+
+<main class="container">
+    {{ content }}
+</main>
+
+<footer>
+    <p>WMO International Cloud Atlas 日本語訳 — 非公式翻訳</p>
+</footer>
+
+</body>
+</html>
