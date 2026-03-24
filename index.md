@@ -25,8 +25,8 @@
 - [積乱雲](Cumulonimbus%20ja/Cumulonimbus%20ja.md)
 
 ## その他の雲
-- 山岳が影響を与えて形成された雲
-- 上層大気の雲
+- [山岳が影響を与えて形成された雲](Orographic%20influences%20on%20clouds%20ja/Orographic%20influences%20on%20clouds%20ja.md)
+- [上層大気の雲](Upper%20atmospheric%20clouds%20ja/Upper%20atmospheric%20clouds%20ja.md)
 
 ## その他の気象現象
 1. [雲以外の大気現象(セクション3.0)-水大気現象＆塵大気現象](Other%20Meteors%20ja/METEORS%20OTHER%20THAN%20CLOUDS1%20ja.md)
