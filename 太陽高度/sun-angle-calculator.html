@@ -16,6 +16,27 @@
             <p id="currentTime">現在: ----年--月--日 --:--:--</p>
         </header>
 
+        <!-- 日付・時間設定 -->
+        <div class="section">
+            <p class="section-title">🕐 日付・時間設定</p>
+            <div class="datetime-mode">
+                <label class="toggle-label">
+                    <input type="checkbox" id="realtime-toggle" checked>
+                    <span>リアルタイム</span>
+                </label>
+            </div>
+            <div class="grid-2" style="margin-top: 0.8rem;">
+                <div>
+                    <label for="date-input">日付</label>
+                    <input type="date" id="date-input" disabled>
+                </div>
+                <div>
+                    <label for="time-input">時刻</label>
+                    <input type="time" id="time-input" step="1" disabled>
+                </div>
+            </div>
+        </div>
+
         <!-- 地点設定 -->
         <div class="section">
             <p class="section-title">📍 地点設定</p>
@@ -48,12 +69,24 @@
 
             <div class="grid-2" style="margin-top: 1rem;">
                 <div>
-                    <label for="latitude">緯度 (°) [-90 ~ 90]</label>
-                    <input type="number" id="latitude" step="0.0001" placeholder="例: 35.6895">
+                    <label for="latitude">緯度 (°)</label>
+                    <div class="coord-input-group">
+                        <select id="lat-hemisphere">
+                            <option value="N">北緯 (N)</option>
+                            <option value="S">南緯 (S)</option>
+                        </select>
+                        <input type="number" id="latitude" step="0.0001" min="0" max="90" placeholder="例: 35.6895">
+                    </div>
                 </div>
                 <div>
-                    <label for="longitude">経度 (°) [-180 ~ 180]</label>
-                    <input type="number" id="longitude" step="0.0001" placeholder="例: 139.6917">
+                    <label for="longitude">経度 (°)</label>
+                    <div class="coord-input-group">
+                        <select id="lon-hemisphere">
+                            <option value="E">東経 (E)</option>
+                            <option value="W">西経 (W)</option>
+                        </select>
+                        <input type="number" id="longitude" step="0.0001" min="0" max="180" placeholder="例: 139.6917">
+                    </div>
                 </div>
             </div>
 
@@ -120,6 +153,10 @@
                             </div>
                         </div>
                         <p id="cha-note" class="note-text"></p>
+                        <div class="season-block">
+                            <p class="time-range-label">この地点で観測可能な季節</p>
+                            <p id="cha-season" class="time-range-val season-val">--</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -131,14 +168,21 @@
         document.addEventListener('DOMContentLoaded', function() {
             var latitudeInput = document.getElementById('latitude');
             var longitudeInput = document.getElementById('longitude');
+            var latHemisphere = document.getElementById('lat-hemisphere');
+            var lonHemisphere = document.getElementById('lon-hemisphere');
             var citySelect = document.getElementById('city-select');
             var getLocationBtn = document.getElementById('get-location-btn');
             var setLocationBtn = document.getElementById('set-location-btn');
             var locationStatus = document.getElementById('location-status');
             var currentTimeEl = document.getElementById('currentTime');
             var currentAltitudeEl = document.getElementById('current-altitude');
-            
-            // New Elements for Rainbow/Arcs
+
+            // 日付・時間設定要素
+            var realtimeToggle = document.getElementById('realtime-toggle');
+            var dateInput = document.getElementById('date-input');
+            var timeInput = document.getElementById('time-input');
+
+            // 虹・アーク表示要素
             var rainbowMorningEl = document.getElementById('rainbow-morning');
             var rainbowAfternoonEl = document.getElementById('rainbow-afternoon');
             var rainbowNoteEl = document.getElementById('rainbow-note');
@@ -147,6 +191,7 @@
             var czaNoteEl = document.getElementById('cza-note');
             var chaTimeEl = document.getElementById('cha-time');
             var chaNoteEl = document.getElementById('cha-note');
+            var chaSeasonEl = document.getElementById('cha-season');
 
             var displayLocationEl = document.getElementById('display-location');
 
@@ -162,11 +207,74 @@
                 'naha':      { name: '那覇',   lat: 26.2124, lon: 127.6792 }
             };
 
-            // var TARGET_ALTITUDE = 42; // Removed
             var calculationInterval;
 
             var deg2rad = function(deg) { return deg * Math.PI / 180; };
             var rad2deg = function(rad) { return rad * 180 / Math.PI; };
+
+            // 入力欄から符号付き緯度・経度を取得
+            function getSignedLatLon() {
+                var latVal = parseFloat(latitudeInput.value);
+                var lonVal = parseFloat(longitudeInput.value);
+                if (isNaN(latVal) || isNaN(lonVal)) return null;
+                var lat = latHemisphere.value === 'S' ? -latVal : latVal;
+                var lon = lonHemisphere.value === 'W' ? -lonVal : lonVal;
+                if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+                return { lat: lat, lon: lon };
+            }
+
+            // 符号付き緯度経度から入力欄に値をセット
+            function updateLocationInputs(lat, lon) {
+                latHemisphere.value = lat >= 0 ? 'N' : 'S';
+                lonHemisphere.value = lon >= 0 ? 'E' : 'W';
+                latitudeInput.value  = Math.abs(lat).toFixed(4);
+                longitudeInput.value = Math.abs(lon).toFixed(4);
+            }
+
+            // 選択された日時を取得（リアルタイム or 手動設定）
+            function getSelectedDate() {
+                if (realtimeToggle.checked) {
+                    return new Date();
+                }
+                var dateStr = dateInput.value;
+                var timeStr = timeInput.value;
+                if (!dateStr || !timeStr) return new Date();
+                // timeStr は "HH:MM" または "HH:MM:SS"
+                var parts = timeStr.split(':');
+                var h = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10);
+                var s = parts[2] ? parseInt(parts[2], 10) : 0;
+                var d = new Date(dateStr);
+                d.setHours(h, m, s, 0);
+                return d;
+            }
+
+            // リアルタイムトグルの切り替え
+            realtimeToggle.addEventListener('change', function() {
+                var manual = !realtimeToggle.checked;
+                dateInput.disabled = !manual;
+                timeInput.disabled = !manual;
+                if (manual) {
+                    // 現在日時をデフォルト値としてセット
+                    var now = new Date();
+                    dateInput.value = now.getFullYear() + '-' +
+                        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(now.getDate()).padStart(2, '0');
+                    timeInput.value = String(now.getHours()).padStart(2, '0') + ':' +
+                        String(now.getMinutes()).padStart(2, '0') + ':' +
+                        String(now.getSeconds()).padStart(2, '0');
+                }
+                // 地点が設定済みなら再計算
+                if (getSignedLatLon()) updateCalculations();
+            });
+
+            // 手動設定変更時に再計算
+            dateInput.addEventListener('change', function() {
+                if (getSignedLatLon()) updateCalculations();
+            });
+            timeInput.addEventListener('change', function() {
+                if (getSignedLatLon()) updateCalculations();
+            });
 
             function calculateSunPosition(lat, lon, date) {
                 var year    = date.getFullYear();
@@ -196,9 +304,16 @@
                 return { altitude: rad2deg(Math.asin(sinAltitude)), declination: declination, eqTime: eqTime };
             }
 
+            // 指定日の南中高度（最大太陽高度）を計算
+            function calculateMaxAltitudeForDay(lat, dayOfYear) {
+                var declination = -23.45 * Math.cos(deg2rad((360 / 365) * (dayOfYear + 10)));
+                // 南中高度 = 90 - |lat - declination|
+                return 90 - Math.abs(lat - declination);
+            }
+
             // Calculate time when sun crosses a specific altitude
             function calculateTimeForAltitude(lat, lon, targetAlt, date) {
-                var sunPos         = calculateSunPosition(lat, lon, date); // Use current date for approx declination
+                var sunPos         = calculateSunPosition(lat, lon, date);
                 var declination    = sunPos.declination;
                 var eqTime         = sunPos.eqTime;
                 var latRad         = deg2rad(lat);
@@ -236,6 +351,58 @@
                 };
             }
 
+            // 環水平アーク観測可能な季節期間を計算
+            function calculateCHASeason(lat) {
+                var year = new Date().getFullYear();
+                var isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+                var totalDays = isLeap ? 366 : 365;
+                var daysInMonth = [0,31, isLeap ? 29 : 28, 31,30,31,30,31,31,30,31,30,31];
+
+                // 各日の南中高度を計算し、58°以上の日を特定
+                var reachable = [];
+                for (var d = 1; d <= totalDays; d++) {
+                    var maxAlt = calculateMaxAltitudeForDay(lat, d);
+                    if (maxAlt >= 58) reachable.push(d);
+                }
+
+                if (reachable.length === 0) {
+                    return 'この緯度では環水平アークは観測できません';
+                }
+
+                // 通日から月日文字列に変換
+                function dayOfYearToDateStr(doy) {
+                    var m = 1;
+                    var remaining = doy;
+                    while (m <= 12 && remaining > daysInMonth[m]) {
+                        remaining -= daysInMonth[m];
+                        m++;
+                    }
+                    return m + '月' + remaining + '日';
+                }
+
+                // 連続した期間を検出（年をまたぐ場合も考慮）
+                var startDay = reachable[0];
+                var endDay = reachable[reachable.length - 1];
+
+                // 年をまたぐかチェック（例: 12月から1月にまたがる場合）
+                // 不連続があるか確認
+                var hasGap = false;
+                for (var i = 1; i < reachable.length; i++) {
+                    if (reachable[i] - reachable[i - 1] > 1) {
+                        hasGap = true;
+                        // 最初のギャップで分割
+                        // ギャップ後 = 後半期間の開始、ギャップ前 = 前半期間の終了
+                        var period1End = reachable[i - 1];
+                        var period2Start = reachable[i];
+                        // 年をまたぐ場合: 後半開始〜前半終了
+                        return dayOfYearToDateStr(period2Start) + ' 〜 ' + dayOfYearToDateStr(period1End);
+                    }
+                }
+
+                // 連続している場合
+                return dayOfYearToDateStr(startDay) + ' 〜 ' + dayOfYearToDateStr(endDay);
+            }
+
             function formatTime(timeInHours) {
                 if (timeInHours === null || isNaN(timeInHours)) return '--:--';
                 // Handle day overflow/underflow if necessary, but for 0-24h:
@@ -247,35 +414,65 @@
                 return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
             }
 
+            function formatDateDisplay(date) {
+                var y  = date.getFullYear();
+                var mo = date.getMonth() + 1;
+                var d  = date.getDate();
+                var h  = date.getHours();
+                var mi = date.getMinutes();
+                var s  = date.getSeconds();
+                return y + '年' + mo + '月' + d + '日 ' +
+                    (h  < 10 ? '0' : '') + h  + ':' +
+                    (mi < 10 ? '0' : '') + mi + ':' +
+                    (s  < 10 ? '0' : '') + s;
+            }
+
             function updateCalculations() {
-                var lat = parseFloat(latitudeInput.value);
-                var lon = parseFloat(longitudeInput.value);
-                if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                var coords = getSignedLatLon();
+                if (!coords) {
                     locationStatus.textContent = '有効な緯度・経度を入力してください。';
                     return;
                 }
-                locationStatus.textContent = '';
-                displayLocationEl.textContent = '計算地点: 緯度 ' + lat.toFixed(4) + '°, 経度 ' + lon.toFixed(4) + '°';
+                var lat = coords.lat;
+                var lon = coords.lon;
 
-                // Real-time altitude update
+                locationStatus.textContent = '';
+                var latLabel = (lat >= 0 ? '北緯' : '南緯') + ' ' + Math.abs(lat).toFixed(4) + '°';
+                var lonLabel = (lon >= 0 ? '東経' : '西経') + ' ' + Math.abs(lon).toFixed(4) + '°';
+                displayLocationEl.textContent = '計算地点: ' + latLabel + ', ' + lonLabel;
+
+                // リアルタイム更新 or 手動設定
                 if (calculationInterval) clearInterval(calculationInterval);
+
                 var updateCurrent = function() {
-                    var now = new Date();
-                    var sunPos = calculateSunPosition(lat, lon, now);
+                    var targetDate = getSelectedDate();
+                    var sunPos = calculateSunPosition(lat, lon, targetDate);
                     currentAltitudeEl.textContent = sunPos.altitude.toFixed(2) + ' °';
+
+                    // ヘッダー時刻表示を更新
+                    if (realtimeToggle.checked) {
+                        currentTimeEl.textContent = '現在: ' + formatDateDisplay(targetDate);
+                    }
                 };
                 updateCurrent();
-                calculationInterval = setInterval(updateCurrent, 1000);
 
-                // Calculate ranges for Today
-                var today = new Date();
+                if (realtimeToggle.checked) {
+                    calculationInterval = setInterval(updateCurrent, 1000);
+                } else {
+                    // 手動設定の場合、ヘッダー時刻も手動日時を反映
+                    var manualDate = getSelectedDate();
+                    currentTimeEl.textContent = '設定日時: ' + formatDateDisplay(manualDate);
+                }
+
+                // 選択された日付で範囲計算
+                var targetDay = getSelectedDate();
                 
                 // 1. Sun Rise/Set (approx at 0 degrees, strictly -0.833 but simplified to 0 as per request)
-                var t0 = calculateTimeForAltitude(lat, lon, 0, today);
+                var t0 = calculateTimeForAltitude(lat, lon, 0, targetDay);
                 // 2. Thresholds
-                var t32 = calculateTimeForAltitude(lat, lon, 32, today); // CZA
-                var t42 = calculateTimeForAltitude(lat, lon, 42, today); // Rainbow
-                var t58 = calculateTimeForAltitude(lat, lon, 58, today); // CHA
+                var t32 = calculateTimeForAltitude(lat, lon, 32, targetDay); // CZA
+                var t42 = calculateTimeForAltitude(lat, lon, 42, targetDay); // Rainbow
+                var t58 = calculateTimeForAltitude(lat, lon, 58, targetDay); // CHA
 
                 // --- Helper to set text ---
                 function setRange(el, start, end) {
@@ -356,11 +553,9 @@
                     setRange(chaTimeEl, t0.morning, t0.afternoon); // Visible all day (while sun is up)
                     chaNoteEl.textContent = '太陽高度が非常に高いため、長時間観測可能です。';
                 }
-            }
 
-            function updateLocationInputs(lat, lon) {
-                latitudeInput.value  = lat.toFixed(4);
-                longitudeInput.value = lon.toFixed(4);
+                // --- 環水平アーク観測可能な季節期間 ---
+                chaSeasonEl.textContent = calculateCHASeason(lat);
             }
 
             citySelect.addEventListener('change', function() {
@@ -415,18 +610,11 @@
             });
 
             function initialize() {
+                // ヘッダー時刻のリアルタイム更新
                 setInterval(function() {
-                    var now = new Date();
-                    var y = now.getFullYear();
-                    var mo = now.getMonth() + 1;
-                    var d  = now.getDate();
-                    var h  = now.getHours();
-                    var mi = now.getMinutes();
-                    var s  = now.getSeconds();
-                    currentTimeEl.textContent = y + '年' + mo + '月' + d + '日 ' +
-                        (h  < 10 ? '0' : '') + h  + ':' +
-                        (mi < 10 ? '0' : '') + mi + ':' +
-                        (s  < 10 ? '0' : '') + s;
+                    if (realtimeToggle.checked) {
+                        currentTimeEl.textContent = '現在: ' + formatDateDisplay(new Date());
+                    }
                 }, 1000);
 
                 citySelect.value = 'hakodate';
